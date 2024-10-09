@@ -9,7 +9,7 @@
     import ByoList from './lib/list';
     import type {iByoList} from './lib/list';
     import ByoStorage from './lib/storage';
-    
+
     const byo_storage: ByoStorage = new ByoStorage();
 
     let list_url: string = '';
@@ -22,8 +22,11 @@
         for (let mod_list of listOfLists.lists) {
             console.log('Reading URL: ', mod_list);
             let byo_list: ByoList = new ByoList(mod_list);
-            await byo_list.initialize();
-            all_lists.set(mod_list, byo_list);
+            let result: boolean = await byo_list.initialize();
+            if (result) {
+                console.log('Adding list: ', mod_list);
+                all_lists.set(mod_list, byo_list);
+            }
         }
         return all_lists;
     }
@@ -38,7 +41,14 @@
         }
         try {
             console.log('Adding list: ', list_url);
-            new URL(list_url);
+            let new_list: ByoList = new ByoList(list_url);
+            try {
+                await new_list.download();
+                await new_list.save()
+            } catch (e) {
+                console.error('Failed to download list and save: ', list_url);
+                return;
+            }
         } catch (e) {
             console.error('Invalid URL: ', list_url);
             return;
@@ -46,10 +56,10 @@
         // Svelte trickery for updating lists:
         // https://learn.svelte.dev/tutorial/updating-arrays-and-objects
         listOfLists.lists.push(list_url);
-        listOfLists = listOfLists;
+        listOfLists.lists = listOfLists.lists;
         byo_storage.save_list_of_lists_sync(listOfLists);
+        console.log('URL parsed: ', list_url);
         list_url = '';
-
     };
 
     const open_fullscreen = () => {
@@ -69,11 +79,13 @@
             <th></th>
             <th></th>
         </tr>
-        {#each lists.keys() as list_key}
-            <tr>
-                <td>{lists.get(list_key).url.href}</td>
-                <td>{lists.get(list_key).list.block_list.length}</td>
-            </tr>
+        {#each listOfLists.lists as list_url}
+            {#if lists.has(list_url)}
+                <tr>
+                    <td>{lists.get(list_url).url.href}</td>
+                    <td>{lists.get(list_url).list.block_list.length}</td>
+                </tr>
+            {/if}
         {/each}
     </table>
     <br/>

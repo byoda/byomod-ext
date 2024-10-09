@@ -6,6 +6,9 @@ import * as yaml from 'js-yaml';
 
 import ByoStorage from './storage';
 import {SocialNetwork} from './datatypes';
+import type {
+    iByoList, iBlockEntry, iSocialAccount, iByoListCategory, iByoListMeta
+} from './datatypes';
 
 export interface iAccountStat {
     timestamp: Date;
@@ -14,44 +17,7 @@ export interface iAccountStat {
     views: number;
 }
 
-export interface iSocialAccount {
-    platform: string;
-    handle: string;
-    url: string;
-    is_primary: boolean;
-    status: iAccountStat[];
-}
 
-export interface ModerationEntry {
-    first_name: string;
-    last_name: string;
-    business_name: string;
-    business_type: string;
-    status: string;
-    languages: string[];
-    categories: iByoListCategory[];
-    annotations: string[];
-    urls: string[];
-    social_accounts: iSocialAccount[];
-}
-
-export interface iByoListCategory {
-    name: string;
-    description: string;
-}
-
-export interface iByoListMeta {
-    author_email: string;
-    author_name: string;
-    author_url: string;
-    categories: iByoListCategory[];
-}
-
-export interface iByoList {
-    meta: iByoListMeta;
-    block_list: ModerationEntry[];
-    trust_list: string[];
-}
 
 export default class ByoList {
     storage: ByoStorage;
@@ -68,33 +34,36 @@ export default class ByoList {
         this.url = url as URL;
     }
 
-    async initialize() {
+    async initialize(): Promise<boolean> {
         if (this.url === undefined) {
             console.error('No URL set for ByoList');
-            return;
+            return false;
         }
         try {
             await this.load();
-            if (this.list !== undefined
-                    && this.list.block_list !== undefined
-                    && this.list.block_list.length > 0) {
-                return
+            if (this.list === undefined) {
+                return false;
             }
+            if (this.list.block_list === undefined) {
+                this.list.block_list = []
+            }
+            return true;
         } catch (e) {
             console.log(`Could not load from storage: ${this.url.href}`);
         }
         try {
             await this.download();
             await this.save();
-            return
+            return true;
         } catch (e) {
-            console.error('Could not download: ', mod_list, e);
+            console.error('Could not download: ', this.url.href, e);
         }
+        return true;
     }
 
 
     get_keyname(key: string): string {
-        return `byomod_${key}`;
+        return `${key}`;
     }
 
     async load(): Promise<number> {
@@ -124,9 +93,7 @@ export default class ByoList {
             console.log('No data in the list to save');
             return;
         }
-        console.log(
-            'Saving list:', key, 'with'
-        );
+        console.log(`Saving list: ${key}`);
         this.storage.set_sync(key, this.list);
     }
 

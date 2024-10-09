@@ -34,7 +34,6 @@ export default class ByoStorage {
         const parsed = this.get_sync(key);
         if (this.isListOfLists(parsed)) {
             let data: iListOfLists = parsed as iListOfLists;
-            console.log('Lol lists', data.lists, 'type:', typeof data.lists);
             return data
         };
 
@@ -47,7 +46,7 @@ export default class ByoStorage {
     }
 
     isListOfLists(obj: any): obj is iListOfLists {
-        console.log('Got data:', obj);
+        console.log('Got list of lists:', JSON.stringify(obj));
         if (obj === undefined) {
             return false;
         }
