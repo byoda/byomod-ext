@@ -1,24 +1,24 @@
 
-import type {iMessage} from '../lib/datatypes';
-import type {iSocialNetworkAuth} from '../lib/datatypes';
+import type {iMessage} from '../lib/datatypes'
+import type {iSocialNetworkAuth} from '../lib/datatypes'
 
-const user_id: string = '1552795969959636992';
-const block_endpointURL: string = 'https://x.com/i/api/1.1/blocks/create.json';
-const unblock_endpointURL: string = 'https://api.x.com/1.1/blocks/destroy.json';
+const user_id: string = '1552795969959636992'
+const block_endpointURL: string = 'https://x.com/i/api/1.1/blocks/create.json'
+const unblock_endpointURL: string = 'https://api.x.com/1.1/blocks/destroy.json'
 
 
 window.onload = async () => {
-    console.log('Page loaded!');
+    console.log('Content script reporting in!')
     try {
-        console.log('URL:' + block_endpointURL);
+        console.log('URL:' + block_endpointURL)
         let data_text: string | null = localStorage.getItem(
             'socialmod_twitter_auth_tokens'
-        );
+        )
         if (data_text == null) {
-            console.log('No auth tokens found!');
-            return;
+            console.log('No auth tokens found!')
+            return
         }
-        let data = JSON.parse(data_text) as iSocialNetworkAuth;
+        let data = JSON.parse(data_text) as iSocialNetworkAuth
         let csrfToken: string | undefined = data.csrf_token
         let authToken: string | undefined = data.jwt
         const response = await fetch(
@@ -40,45 +40,89 @@ window.onload = async () => {
                 // body: 'screen_name=?EndWokeness'
                 body: 'user_id=' + user_id
             }
-        );
+        )
         if (response.status === 200) {
-            let data = await response.json();
-            console.log(data);
+            let data = await response.json()
+            console.log(data)
         } else if (response.status === 404) {
-            console.log('User not found: ' + user_id);
+            console.log('User not found: ' + user_id)
         }
     } catch (e) {
-        console.log(e);
+        console.log(e)
     }
 }
 
+// Listens to service_worker and extension
 chrome.runtime.onMessage.addListener(
     function(request: string, sender: object, sendResponse: Function) {
         try {
-            let message = JSON.parse(request) as iMessage<iSocialNetworkAuth>;
+            let message = JSON.parse(request)
 
             console.log(
-                `Received message from ${message.source} type ${message.type}`
-            );
+                `Content script received a message from ${message.source} type ${message.type}`
+            )
             if (message.type === 'auth_tokens') {
-                let data: iSocialNetworkAuth = message.data;
+                message = message as iMessage<iSocialNetworkAuth>
+                let data: iSocialNetworkAuth = message.data
                 if (data.name != 'Twitter') {
                     console.log(
                         `We do not yet support social network: ${data.name}`
-                    );
-                    return;
+                    )
+                    return
                 }
                 console.log(
                     `Received auth_tokens: JWT: ${data.jwt}, CSRF Token: ${data.csrf_token}`
-                );
+                )
                 localStorage.setItem(
                     'socialmod_twitter_auth_tokens', JSON.stringify(data)
-                );
+                )
+            } else if (message.type == 'handles') {
+                message = message as iMessage<string[]>
+                let data: string[] = message.data
+                console.log(`Received twitter_handles: ${data}`)
+                localStorage.setItem(
+                    'socialmod_twitter_handles', JSON.stringify(data)
+                )
             }
         } catch (e) {
-            console.log(
-                `Invalid message: ${request}`
-            );
+            console.log(`Invalid message: ${request}: ${e}`)
         }
     }
-);
+)
+
+chrome.runtime.onMessageExternal.addListener(
+    (request, sender, sendResponse) => {
+        try {
+            let message = JSON.parse(request)
+
+            console.log(
+                `Content script received a message from ${message.source} type ${message.type}`
+            )
+            if (message.type === 'auth_tokens') {
+                message = message as iMessage<iSocialNetworkAuth>
+                let data: iSocialNetworkAuth = message.data
+                if (data.name != 'Twitter') {
+                    console.log(
+                        `We do not yet support social network: ${data.name}`
+                    )
+                    return
+                }
+                console.log(
+                    `Received auth_tokens: JWT: ${data.jwt}, CSRF Token: ${data.csrf_token}`
+                )
+                localStorage.setItem(
+                    'socialmod_twitter_auth_tokens', JSON.stringify(data)
+                )
+            } else if (message.type == 'handles') {
+                message = message as iMessage<string[]>
+                let data: string[] = message.data
+                console.log(`Received twitter_handles: ${data}`)
+                localStorage.setItem(
+                    'socialmod_twitter_handles', JSON.stringify(data)
+                )
+            }
+        } catch (e) {
+            console.log(`Invalid message: ${request}: ${e}`)
+        }
+    }
+)

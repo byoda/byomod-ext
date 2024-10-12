@@ -5,10 +5,7 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 
 import ByoStorage from './storage';
-import {SocialNetwork} from './datatypes';
-import type {
-    iByoList, iBlockEntry, iSocialAccount, iByoListCategory, iByoListMeta
-} from './datatypes';
+import type {iByoList} from './datatypes';
 
 export interface iAccountStat {
     timestamp: Date;
@@ -16,7 +13,6 @@ export interface iAccountStat {
     assets: number;
     views: number;
 }
-
 
 
 export default class ByoList {
